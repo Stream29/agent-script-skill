@@ -7,11 +7,10 @@ description: Use to plan for any type of work.
 
 ## Task Tree Structure
 
-- Express `Task Tree` as Kotlin script pseudocode in nested Markdown lists, with top-level logic and descriptive backtick-quoted action names.
-- Accompany with a `Details` section for task context, state needed to resume, inline checks, and subtask links.
+- Express `Task Script` as Kotlin script pseudocode in nested Markdown lists, with top-level logic and descriptive backtick-quoted action names.
 
 ```markdown
-# Task Tree
+# Task Script
 
 - `Review task requirements and relevant code`()
 - **`Implement the requested behavior`()**
@@ -19,7 +18,6 @@ description: Use to plan for any type of work.
 
 # Details
 
-Task context, state needed to resume, inline checks, and subtask links.
 ```
 
 **This is only the simplest example. Planing with rich control flows is suggested.**
@@ -44,8 +42,8 @@ Task context, state needed to resume, inline checks, and subtask links.
       - `Compile and test module`(module)
     - `}`
 - `} catch (CompileOrTestFailed) {`
-    - `Report compile or test failure to the user`()
-    - `goto fix`
+    - val userResponse = `Report compile or test failure to the user`()
+    - `replan with`(userResponse)
 - `}`
 - `while (hasPendingQueue()) {`
   - `Process next message`()
@@ -84,6 +82,7 @@ Task context, state needed to resume, inline checks, and subtask links.
   - **`Apply risky database migration`()**
 - `} catch (e: MigrationException) {`
   - `Rollback migration step`(e)
+  - `Report to user`()
 - `} finally {`
   - `Release deployment lock`()
 - `}`
@@ -91,4 +90,8 @@ Task context, state needed to resume, inline checks, and subtask links.
 
 ## Subtasks
 
-- Keep each subtask in a standalone task document; express it as a function call and link the call name to its document in `Details`.
+- Keep each subtask in a standalone task document and reference it from the parent task document.
+- Express the subtask as a function call and link the call name to its document in `Details`.
+- Holding a resource should be a subtask to avoid forgetting to release it.
+- When invoking subagents, a subtask should be provided to the subagent to share context and collaborate. The subagent holds the subtask flock and can be waited.
+
