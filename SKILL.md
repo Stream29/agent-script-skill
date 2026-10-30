@@ -5,93 +5,100 @@ description: Use to plan for any type of work.
 
 # Programmatic Planning
 
-## Task Tree Structure
+## Script Forms
 
-- Express `Task Script` as Kotlin script pseudocode in nested Markdown lists, with top-level logic and descriptive backtick-quoted action names.
+- `Task Script`: one fenced `kotlin` pseudocode block.
+- Task entry: top-level logic. Reusable workflow or subtask: function.
+- Keep context, decisions, state, and results in the script.
 
-```markdown
-# Task Script
+### Reusable Workflow
 
-- `Review task requirements and relevant code`()
-- **`Implement the requested behavior`()**
-- `Run validation checks for the change`()
-
-# Details
-
+```kotlin
+fun Review(change: Change): ReviewResult {
+    val findings = `Inspect the change`(change)
+    return `Summarize review results`(findings)
+}
 ```
 
-**This is only the simplest example. Planing with rich control flows is suggested.**
+## Imports and Subtasks
+
+- `@file:Import`: relative to the importing document; update paths when tasks move. Import declares functions; a call executes them.
+- Standalone subtask document: invocation context, state, and output. Check completion and output; lock release alone is not completion.
+- Give subagents their subtask document; they hold its flock. Model resource ownership as a subtask with acquisition and release.
+- Markdown imports are pseudocode, not native Kotlin imports; IDE resolution and navigation are not guaranteed.
+
+### Parent Task
+
+```kotlin
+@file:Import("../skills/review/SKILL.md")
+@file:Import("../executable/2026-01-01-validate.md")
+
+val change = `Read the task change`()
+val review = Review(change)
+val validation = Validate(change)
+// ^
+`Deliver results`(review, validation)
+```
+
+### Subtask Document
+
+```kotlin
+fun Validate(change: Change): ValidationResult {
+    val environment = `Prepare validation environment`(change)
+    environment.use {
+        try {
+            `Check predicate A`()
+            `Check predicate B`()
+            `Check predicate C`()
+        } catch (e: PredicateFailed) {
+            return `Handle predicate failure`(e)
+        }
+        return ValidationResult.`Successful`
+    }
+}
+```
 
 ## Execution State
 
-- Bold the current executing or suspended statement in each active invocation or coroutine; concurrent branches may have multiple bold positions.
-- A task completes when its script finishes successfully and its scoped child coroutines have finished.
+- `// ^`: current or suspended statement, per active invocation or coroutine. Move or remove it as execution advances.
+- Shared workflow invocation: record the inner location in the calling task, e.g. `// ^ Review: waiting for user confirmation`.
+- Completion: successful script and finished scoped child coroutines.
+- Interaction: Waiting for user interaction is a suspension.
 
-## Control Flow Examples
+## Control Flow
 
-- Represent standard branches and loops with Kotlin blocks:
 
-```markdown
-- `if (needsMigration()) {`
-  - `Run database schema migration`()
-- `} else {`
-  - `Verify existing schema integrity`()
-- `}`
-- `try {`
-    - `for (module in modules) {`
-      - `Compile and test module`(module)
-    - `}`
-- `} catch (CompileOrTestFailed) {`
-    - val userResponse = `Report compile or test failure to the user`()
-    - `replan with`(userResponse)
-- `}`
-- `while (hasPendingQueue()) {`
-  - `Process next message`()
-- `}`
+```kotlin
+try {
+    for (module in modules) {
+        if (module.requiresTests) {
+            `Compile and test module`(module)
+        }
+    }
+} catch (e: CompileOrTestFailed) {
+    val response = `Report failure and wait for a decision`(e)
+    `Replan based on the decision`(response)
+} finally {
+    `Clean up task resources`()
+}
 ```
 
-## Concurrency Primitives
+## Concurrency
 
-- Use `kotlinx.coroutines` primitives for structured-concurrency semantics.
-- Bold active statements across concurrent branches:
+- `kotlinx.coroutines`: structured concurrency.
 
-```markdown
-- `coroutineScope {`
-  - `val taskA = async {`
-    - **`Build client artifacts`()**
-  - `}`
-  - `val taskB = async {`
-    - **`Build server artifacts`()**
-  - `}`
-  - `taskA.await()`
-  - `taskB.await()`
-  - `launch {`
-    - `Report background metrics`()
-  - `}`
-  - `Deploy bundled artifacts`()
-- `}`
+```kotlin
+coroutineScope {
+    val client = async {
+        `Build client artifacts`()
+        // ^
+    }
+    val server = async {
+        `Build server artifacts`()
+        // ^
+    }
+    client.await()
+    server.await()
+    `Display build results to user`()
+}
 ```
-
-## Exception Handling
-
-- Express error handling and cleanup via `try` / `catch` / `finally` blocks:
-
-```markdown
-- `try {`
-  - `Acquire deployment lock`()
-  - **`Apply risky database migration`()**
-- `} catch (e: MigrationException) {`
-  - `Rollback migration step`(e)
-  - `Report to user`()
-- `} finally {`
-  - `Release deployment lock`()
-- `}`
-```
-
-## Subtasks
-
-- Keep each subtask in a standalone task document and reference it from the parent task document.
-- Express the subtask as a function call and link the call name to its document in `Details`.
-- Holding a resource should be a subtask to avoid forgetting to release it.
-- When invoking subagents, a subtask should be provided to the subagent to share context and collaborate. The subagent holds the subtask flock and can be waited.
-
