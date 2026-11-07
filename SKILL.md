@@ -22,7 +22,8 @@ fun Review(change: Change): ReviewResult {
 
 ## Imports and Subtasks
 
-- `@file:Import`: relative to the importing document; update paths when tasks move. Import declares functions; a call executes them.
+- `@file:Import`: relative to the importing document; update paths when tasks move. Import declares functions; a call executes them. Before executing an imported function, recursively read its defining document and transitive `@file:Import` targets.
+- Reuse existing skill workflows in subtasks via `@file:Import` and parameterized calls instead of simplified ad-hoc functions.
 - Standalone subtask document: invocation context, state, and output. Check completion and output; lock release alone is not completion.
 - Give subagents their subtask document; they hold its flock. Model resource ownership as a subtask with acquisition and release.
 - Markdown imports are pseudocode, not native Kotlin imports; IDE resolution and navigation are not guaranteed.
@@ -60,13 +61,12 @@ fun Validate(change: Change): ValidationResult {
 
 ## Execution State
 
-- `// ^`: current or suspended statement, per active invocation or coroutine. Move or remove it as execution advances.
+- `// ^`: current or suspended statement, per active invocation or coroutine. Move or remove it as execution advances; evolve the script when replanning, looping, or branching.
 - Shared workflow invocation: record the inner location in the calling task, e.g. `// ^ Review: waiting for user confirmation`.
 - Completion: successful script and finished scoped child coroutines.
 - Interaction: Waiting for user interaction is a suspension.
 
 ## Control Flow
-
 
 ```kotlin
 try {
